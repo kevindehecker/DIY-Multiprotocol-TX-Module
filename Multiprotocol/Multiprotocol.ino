@@ -23,7 +23,7 @@
 #include <avr/pgmspace.h>
 
 //#define DEBUG_PIN		// Use pin TX for AVR and SPI_CS for STM32 => DEBUG_PIN_on, DEBUG_PIN_off, DEBUG_PIN_toggle
-//#define DEBUG_SERIAL	// Only for STM32_BOARD compiled with Upload method "Serial"->usart1, "STM32duino bootloader"->USB serial
+#define DEBUG_SERIAL	// Only for STM32_BOARD compiled with Upload method "Serial"->usart1, "STM32duino bootloader"->USB serial
 
 #ifdef __arm__			// Let's automatically select the board if arm is selected
 	#define STM32_BOARD
@@ -319,7 +319,7 @@ void setup()
 		random_init();
 	#endif
 
-	LED2_on;
+	//LED2_on;
 	
 	// Set Chip selects
 	#ifdef A7105_CSN_pin
@@ -487,7 +487,6 @@ void setup()
 			#endif
 		#endif //ENABLE_SERIAL
 	}
-	LED2_on;
 	debugln("Init complete");
 }
 
@@ -503,6 +502,7 @@ void loop()
 		{
 			do
 			{
+        Read_Uart1();
 				Update_All();
 			}
 			while(remote_callback==0 || IS_WAIT_BIND_on);
@@ -531,9 +531,13 @@ void loop()
 		{
 			TX_MAIN_PAUSE_on;
 			tx_pause();
-			if(IS_INPUT_SIGNAL_on && remote_callback!=0)
+			if(IS_INPUT_SIGNAL_on && remote_callback!=0) {
+  			if (Channel_data[2] < 60)
+  				LED2_on;  // green
+        else
+          LED2_off; // green
 				next_callback=remote_callback();
-			else
+			} else
 				next_callback=2000;					// No PPM/serial signal check again in 2ms...
 			TX_MAIN_PAUSE_off;
 			tx_resume();
@@ -612,7 +616,7 @@ uint8_t Update_All()
 			last_signal=millis();
 		}
 	#endif //ENABLE_PPM
-	update_led_status();
+	//update_led_status();
 	#if defined(TELEMETRY)
 		#if ( !( defined(MULTI_TELEMETRY) || defined(MULTI_STATUS) ) )
 			if( (protocol==PROTO_FRSKYD) || (protocol==PROTO_BAYANG) || (protocol==PROTO_NCC1701) || (protocol==PROTO_BUGS) || (protocol==PROTO_BUGSMINI) || (protocol==PROTO_HUBSAN) || (protocol==PROTO_AFHDS2A) || (protocol==PROTO_FRSKYX) || (protocol==PROTO_DSM) || (protocol==PROTO_CABELL)  || (protocol==PROTO_HITEC))
@@ -641,7 +645,7 @@ uint8_t Update_All()
 	#endif //ENABLE_BIND_CH
 	if(IS_CHANGE_PROTOCOL_FLAG_on)
 	{ // Protocol needs to be changed or relaunched for bind
-		protocol_init();									//init new protocol
+		protocol_init();									//init new protocol    
 		return 1;
 	}
 	return 0;
@@ -845,11 +849,12 @@ inline void tx_resume()
 static void protocol_init()
 {
 	static uint16_t next_callback;
+  Serial.println("Protocol init");
 	if(IS_WAIT_BIND_off)
 	{
 		remote_callback = 0;			// No protocol
 		next_callback=0;				// Default is immediate call back
-		LED_off;						// Led off during protocol init
+		//LED_off;						// Led off during protocol init
 		modules_reset();				// Reset all modules
 
 		// reset telemetry
@@ -1342,6 +1347,7 @@ void update_serial_data()
 		{ // Restart protocol with bind
 			CHANGE_PROTOCOL_FLAG_on;
 			BIND_IN_PROGRESS;
+      LED_on;
 		}
 		else
 			if( ((rx_ok_buff[1]&0x80)==0) && ((cur_protocol[1]&0x80)!=0) )	// Bind flag has been reset
@@ -1353,6 +1359,7 @@ void update_serial_data()
 				#endif
 				if(bind_counter>2)
 					bind_counter=2;
+         LED_off;
 			}
 			
 	//store current protocol values
@@ -1737,6 +1744,7 @@ static uint32_t random_id(uint16_t address, uint8_t create_new)
 	#endif
 	{	// RX interrupt
 		static uint8_t idx=0;
+//   LED_toggle;
 		#ifdef ORANGE_TX
 			if((USARTC0.STATUS & 0x1C)==0)		// Check frame error, data overrun and parity error
 		#elif defined STM32_BOARD
@@ -1809,6 +1817,40 @@ static uint32_t random_id(uint16_t address, uint8_t create_new)
 			UCSR0B |= _BV(RXCIE0) ;			// RX interrupt enable
 		#endif
 	}
+
+
+
+/****************************/
+void Read_Uart1() {
+  
+  while (Serial.available()) {
+    static uint8_t idx=0;
+    if(idx==0||discard_frame==1) { // Let's try to sync at this point
+      idx=0;discard_frame=0;
+      RX_MISSED_BUFF_off;     // If rx_buff was good it's not anymore...
+      rx_buff[0]=Serial.read();
+      #ifdef FAILSAFE_ENABLE
+        if((rx_buff[0]&0xFC)==0x54) {// If 1st byte is 0x54, 0x55, 0x56 or 0x57 it looks ok
+      #else
+        if((rx_buff[0]&0xFE)==0x54) {// If 1st byte is 0x54 or 0x55 it looks ok
+      #endif
+        idx++;
+      }
+    } else {
+      rx_buff[idx++]=Serial.read();    // Store received byte
+      if(idx>=RXBUFFER_SIZE) { // A full frame has been received
+        if(!IS_RX_DONOTUPDATE_on) { //Good frame received and main is not working on the buffer
+          memcpy((void*)rx_ok_buff,(const void*)rx_buff,RXBUFFER_SIZE);// Duplicate the buffer
+          LED_toggle; // red
+          RX_FLAG_on;     // flag for main to process servo data
+        } else
+          RX_MISSED_BUFF_on;  // notify that rx_buff is good
+        discard_frame=1;    // start again
+      }
+    }
+  }
+}
+/***************************/
 
 	//Serial timer
 	#ifdef ORANGE_TX

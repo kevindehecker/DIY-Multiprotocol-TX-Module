@@ -51,7 +51,7 @@
 
 //DSM protocol is using by default the Spektrum throw of 1100..1900us @100% and 1000..2000us @125%.
 //For more throw, 1024..1976us @100% and 904..2096us @125%, remove the "//" on the line below. Be aware that too much throw can damage some UMX servos. To achieve standard throw in this mode use a channel weight of 84%.
-//#define DSM_MAX_THROW
+#define DSM_MAX_THROW
 
 
 /*****************/
@@ -60,7 +60,7 @@
 //Bind from channel enables you to bind when a specified channel is going from low to high. This feature is only active
 // if you specify AUTOBIND in PPM mode or set AutoBind to YES for serial mode. It also requires that the throttle channel is low.
 //Comment to globaly disable the bind feature from a channel.
-#define ENABLE_BIND_CH
+//#define ENABLE_BIND_CH
 //Set the channel number used for bind. Default is 16.
 #define BIND_CH	16
 
@@ -207,7 +207,7 @@
 //  Devo, WK2x01, SFHSS, HISKY/HK310 and AFHDS2A
 //All channels are centered except throttle which is forced low.
 //If you want to diasble failsafe globally comment the line below using "//".
-#define FAILSAFE_ENABLE
+//#define FAILSAFE_ENABLE
 
 //Failsafe throttle low value in percentage.
 //Value between -125% and +125%. Default -100.
@@ -228,7 +228,7 @@
 //In this section you can configure the telemetry.
 
 //If you do not plan using the telemetry comment this global setting using "//" and skip to the next section.
-#define TELEMETRY
+//#define TELEMETRY
 
 //Comment to invert the polarity of the output telemetry serial signal.
 //This function takes quite some flash space and processor power on an atmega.
@@ -236,11 +236,11 @@
 //On a 9XR_PRO running ersky9x both commented and uncommented will work depending on the radio setting Invert COM1 under the Telemetry menu.
 //On other addon/replacement boards like the 9xtreme board or the Ar9x board running ersky9x, you need to uncomment the line below.
 //For er9x it depends if you have an inveter mod or not on the telemetry pin. If you don't have an inverter comment this line.
-#define INVERT_TELEMETRY
+//#define INVERT_TELEMETRY
 
 //Comment if you don't want to send Multi status telemetry frames (Protocol available, Bind in progress, version...)
 //Use with er9x/erksy9x, for OpenTX MULTI_TELEMETRY below is preferred instead
-#define MULTI_STATUS
+//#define MULTI_STATUS
 
 //Uncomment to send Multi status and allow OpenTX to autodetect the telemetry format
 //Supported by OpenTX version 2.2 RC9 and newer. NOT supported by er9x/ersky9x use MULTI_STATUS instead.
@@ -283,7 +283,7 @@
 /*************************/
 //In this section you can configure all details about PPM.
 //If you do not plan to use the PPM mode comment this line using "//" to save Flash space, you don't need to configure anything below in this case
-#define ENABLE_PPM
+//#define ENABLE_PPM
 
 /** TX END POINTS **/
 //It is important for the module to know the endpoints of your radio.
