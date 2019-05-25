@@ -487,7 +487,7 @@ void setup()
 			#endif
 		#endif //ENABLE_SERIAL
 	}
-	debugln("Init complete");
+	debugln("Init complete and Ready to PATS");
 }
 
 // Main
