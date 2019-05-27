@@ -223,8 +223,8 @@ void setup()
 	// Setup diagnostic uart before anything else
 	#ifdef DEBUG_SERIAL
 		Serial.begin(115200,SERIAL_8N1);
-		while (!Serial); // Wait for ever for the serial port to connect...
-		debugln("Multiprotocol version: %d.%d.%d.%d", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION, VERSION_PATCH_LEVEL);
+		while (!Serial); // Wait for ever for the serial port to connect..
+    debugln("Multiprotocol version: %d.%d.%d.%d", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION, VERSION_PATCH_LEVEL);	
 	#endif
 
 	// General pinout
@@ -396,11 +396,33 @@ void setup()
 	#endif
 #endif
 
-	// Read or create protocol id
-	MProtocol_id_master=random_id(10,false);
+  //receive bind id from base station
+  while(1){
+    debugln("Specify bind ID...");
+    while (!Serial.available());
+    uint8_t h0 = Serial.read(); // header 66 
+    while (!Serial.available());
+    uint8_t h1 = Serial.read(); // header 67
+    while (!Serial.available());
+    uint8_t id3 = Serial.read();
+    while (!Serial.available()); // id0
+    uint8_t id2 = Serial.read();
+    while (!Serial.available());
+    uint8_t id1 = Serial.read();
+    while (!Serial.available());
+    uint8_t id0 = Serial.read();
+    while (!Serial.available());
+    uint8_t h2 = Serial.read(); // footer 68
 
-	debugln("Module Id: %lx", MProtocol_id_master);
-	
+    MProtocol_id_master = id0 + (id1<<8) + (id2 << 16) + (id3 << 24);
+    if (h0 == 66 && h1 == 67 && h2 == 68){
+      debugln("ID received: %d , %d , %d , %d  -> %lx",id3,id2,id1,id0, MProtocol_id_master);
+      break;
+    } else {
+      debugln("Bind id package not recognized.... retry");
+    }
+  }
+  
 #ifdef ENABLE_PPM
 	//Protocol and interrupts initialization
 	if(mode_select != MODE_SERIAL)
@@ -487,7 +509,7 @@ void setup()
 			#endif
 		#endif //ENABLE_SERIAL
 	}
-	debugln("Init complete and Ready to PATS");
+	debugln("Init complete and ready to PATS");
 }
 
 // Main
