@@ -131,7 +131,7 @@
 //If you have 2 Multi modules which you want to share the same ID so you can use either to control the same RC model
 // then you can force the ID to a certain known value using the lines below.
 //Default is commented, you should uncoment only for test purpose or if you know exactly what you are doing!!!
-//#define FORCE_GLOBAL_ID	0x12345678
+#define FORCE_GLOBAL_ID	0x66666666
 
 //Protocols using the CYRF6936 (DSM, Devo, Walkera...) are using the CYRF ID instead which should prevent duplicated IDs.
 //If you have 2 Multi modules which you want to share the same ID so you can use either to control the same RC model
