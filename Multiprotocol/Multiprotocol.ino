@@ -488,6 +488,7 @@ void setup()
 		#endif //ENABLE_SERIAL
 	}
 	LED2_on;
+  debugln("PATS fixed id: %d.", FORCE_GLOBAL_ID);
 	debugln("Init complete");
 }
 
