@@ -156,7 +156,7 @@ uint8_t option;
 uint8_t cur_protocol[3];
 uint8_t prev_option;
 uint8_t prev_power=0xFD; // unused power value
-uint8_t  RX_num;
+uint8_t  RX_num = 0;
 
 //Serial RX variables
 #define BAUD 100000
@@ -405,7 +405,7 @@ void setup()
     uint8_t h1 = Serial.read(); // header 67
     while (!Serial.available());
     uint8_t id3 = Serial.read();
-    while (!Serial.available()); // id0
+    while (!Serial.available());
     uint8_t id2 = Serial.read();
     while (!Serial.available());
     uint8_t id1 = Serial.read();
