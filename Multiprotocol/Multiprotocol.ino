@@ -224,7 +224,7 @@ void setup()
 	#ifdef DEBUG_SERIAL
 		Serial.begin(115200,SERIAL_8N1);
 		while (!Serial); // Wait for ever for the serial port to connect..
-    debugln("Multiprotocol version: %d.%d.%d.%d", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION, VERSION_PATCH_LEVEL);	
+    debugln("Multi module initializing!" );	 // This message does not always never arrive, e.g. in screen
 	#endif
 
 	// General pinout
@@ -368,6 +368,7 @@ void setup()
 			((PROTO_DIAL4_ipr & _BV(PROTO_DIAL4_pin)) ? 0 : 8);
 	#endif
 	//mode_select=1;
+    debugln("Multiprotocol version: %d.%d.%d.%d", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION, VERSION_PATCH_LEVEL);  
     debugln("Protocol selection switch reads as %d", mode_select);
 
 	#ifdef ENABLE_PPM
