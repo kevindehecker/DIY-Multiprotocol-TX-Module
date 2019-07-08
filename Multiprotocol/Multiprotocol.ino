@@ -400,8 +400,12 @@ void setup()
   //receive bind id from base station
   while(1){
     debugln("Specify bind ID...");
-    while (!Serial.available());
-    uint8_t h0 = Serial.read(); // header 66 
+    uint8_t h0 = 0;
+    while(h0!=66){
+      while (!Serial.available());
+         h0= Serial.read(); // header 66 
+         debugln("Error: I want 66 but I got this byte: %d",h0);
+    }
     while (!Serial.available());
     uint8_t h1 = Serial.read(); // header 67
     while (!Serial.available());
@@ -420,6 +424,7 @@ void setup()
       debugln("ID received: %d , %d , %d , %d  -> %lx",id3,id2,id1,id0, MProtocol_id_master);
       break;
     } else {
+      debugln("ERROR: received: %d, %d, %d, %d , %d , %d , %d  -> %lx",h0,h1,h2,id3,id2,id1,id0, MProtocol_id_master);
       debugln("Bind id package not recognized.... retry");
     }
   }
