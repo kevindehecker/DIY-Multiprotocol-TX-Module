@@ -623,6 +623,9 @@ uint8_t Update_All()
 			INPUT_SIGNAL_on;								//valid signal received
 			last_signal=millis();
 		}
+  if (millis() - last_signal > 100) { // assume something went wrong and put throttle to 0
+    Channel_data[THROTTLE] = CHANNEL_MIN_100;
+  }
 	#endif //ENABLE_SERIAL
 	#ifdef ENABLE_PPM
 		if(mode_select!=MODE_SERIAL && IS_PPM_FLAG_on)		// PPM mode and a full frame has been received
