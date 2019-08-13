@@ -62,7 +62,7 @@
 //Comment to globaly disable the bind feature from a channel.
 #define ENABLE_BIND_CH
 //Set the channel number used for bind. Default is 16.
-#define BIND_CH	16
+#define BIND_CH	8
 
 //Comment to disable the wait for bind feature. If Autobind is enabled in the model config, this feature will not activate
 // the selected protocol unless a bind is requested using bind from channel or the GUI "Bind" button.
@@ -283,7 +283,7 @@
 /*************************/
 //In this section you can configure all details about PPM.
 //If you do not plan to use the PPM mode comment this line using "//" to save Flash space, you don't need to configure anything below in this case
-#define ENABLE_PPM
+//#define ENABLE_PPM
 
 /** TX END POINTS **/
 //It is important for the module to know the endpoints of your radio.
