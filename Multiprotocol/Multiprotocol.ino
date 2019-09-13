@@ -626,6 +626,19 @@ uint8_t Update_All()
   if (millis() - last_signal > 100) { // assume something went wrong and put throttle to 0
     Channel_data[THROTTLE] = CHANNEL_MIN_100;
   }
+
+  if (millis() - last_signal > 1000) { // stop sending after a one second period of not receiving any updates from the basestation
+    while (!Serial.available()) {
+      LED_on;
+      LED2_off;
+      delayMilliseconds(100);
+      LED_off;
+      LED2_on;
+      delayMilliseconds(100);
+    }
+    last_signal = millis();;
+  }
+  
 	#endif //ENABLE_SERIAL
 	#ifdef ENABLE_PPM
 		if(mode_select!=MODE_SERIAL && IS_PPM_FLAG_on)		// PPM mode and a full frame has been received
