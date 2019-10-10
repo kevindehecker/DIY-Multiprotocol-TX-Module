@@ -217,6 +217,8 @@ uint8_t pkt[MAX_PKT];//telemetry receiving packets
 typedef uint16_t (*void_function_t) (void);//pointer to a function with no parameters which return an uint16_t integer
 void_function_t remote_callback = 0;
 
+void(* resetFunc) (void) = 0;
+
 // Init
 void setup()
 {
@@ -635,6 +637,9 @@ uint8_t Update_All()
       LED_off;
       LED2_on;
       delayMilliseconds(100);
+      if (millis() - last_signal > 10000) { // after 10s completely reset the arduino. Then it will then re-ask for init settings.
+        void(* resetFunc) (void) = 0;
+      }
     }
     last_signal = millis();;
   }
