@@ -218,6 +218,7 @@ typedef uint16_t (*void_function_t) (void);//pointer to a function with no param
 void_function_t remote_callback = 0;
 
 void(* resetFunc) (void) = 0;
+void receive_protocol_info();
 
 // Init
 void setup()
@@ -398,38 +399,7 @@ void setup()
 		randomSeed(random_value());
 	#endif
 #endif
-
-  //receive bind id from base station
-  while(1){
-    debugln("Specify bind ID...");
-    uint8_t h0 = 0;
-    while(h0!=66){
-      while (!Serial.available());
-         h0= Serial.read(); // header 66 
-         debugln("Error: I want 66 but I got this byte: %d",h0);
-    }
-    while (!Serial.available());
-    uint8_t h1 = Serial.read(); // header 67
-    while (!Serial.available());
-    uint8_t id3 = Serial.read();
-    while (!Serial.available());
-    uint8_t id2 = Serial.read();
-    while (!Serial.available());
-    uint8_t id1 = Serial.read();
-    while (!Serial.available());
-    uint8_t id0 = Serial.read();
-    while (!Serial.available());
-    uint8_t h2 = Serial.read(); // footer 68
-
-    MProtocol_id_master = id0 + (id1<<8) + (id2 << 16) + (id3 << 24);
-    if (h0 == 66 && h1 == 67 && h2 == 68){
-      debugln("ID received: %d , %d , %d , %d  -> %lx",id3,id2,id1,id0, MProtocol_id_master);
-      break;
-    } else {
-      debugln("ERROR: received: %d, %d, %d, %d , %d , %d , %d  -> %lx",h0,h1,h2,id3,id2,id1,id0, MProtocol_id_master);
-      debugln("Bind id package not recognized.... retry");
-    }
-  }
+	receive_protocol_info();
   
 #ifdef ENABLE_PPM
 	//Protocol and interrupts initialization
@@ -637,8 +607,11 @@ uint8_t Update_All()
       LED_off;
       LED2_on;
       delayMilliseconds(100);
-      if (millis() - last_signal > 10000) { // after 10s completely reset the arduino. Then it will then re-ask for init settings.
-        void(* resetFunc) (void) = 0;
+      if (millis() - last_signal > 3000) { // after 10s completely reset the arduino. Then it will then re-ask for init settings.
+          LED2_off;
+          LED_off;
+          receive_protocol_info();
+          protocol_init();
       }
     }
     last_signal = millis();;
@@ -1455,6 +1428,41 @@ void update_serial_data()
 		if(failsafe)
 			debugln("RX_FS:%d,%d,%d,%d",Failsafe_data[0],Failsafe_data[1],Failsafe_data[2],Failsafe_data[3]);
 	#endif
+}
+
+
+void receive_protocol_info() {
+    //receive bind id from base station
+  while(1){
+    debugln("Specify bind ID...");
+    uint8_t h0 = 0;
+    while(h0!=66){
+      while (!Serial.available());
+         h0= Serial.read(); // header 66 
+         debugln("Error: I want 66 but I got this byte: %d",h0);
+    }
+    while (!Serial.available());
+    uint8_t h1 = Serial.read(); // header 67
+    while (!Serial.available());
+    uint8_t id3 = Serial.read();
+    while (!Serial.available());
+    uint8_t id2 = Serial.read();
+    while (!Serial.available());
+    uint8_t id1 = Serial.read();
+    while (!Serial.available());
+    uint8_t id0 = Serial.read();
+    while (!Serial.available());
+    uint8_t h2 = Serial.read(); // footer 68
+
+    MProtocol_id_master = id0 + (id1<<8) + (id2 << 16) + (id3 << 24);
+    if (h0 == 66 && h1 == 67 && h2 == 68){
+      debugln("ID received: %d , %d , %d , %d  -> %lx",id3,id2,id1,id0, MProtocol_id_master);
+      break;
+    } else {
+      debugln("ERROR: received: %d, %d, %d, %d , %d , %d , %d  -> %lx",h0,h1,h2,id3,id2,id1,id0, MProtocol_id_master);
+      debugln("Bind id package not recognized.... retry");
+    }
+  }
 }
 
 void modules_reset()
