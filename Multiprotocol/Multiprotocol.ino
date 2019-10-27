@@ -158,6 +158,8 @@ uint8_t prev_option;
 uint8_t prev_power=0xFD; // unused power value
 uint8_t  RX_num = 0;
 
+bool mode3d = true;
+
 //Serial RX variables
 #define BAUD 100000
 #define RXBUFFER_SIZE 26
@@ -596,7 +598,10 @@ uint8_t Update_All()
 			last_signal=millis();
 		}
   if (millis() - last_signal > 100) { // assume something went wrong and put throttle to 0
-    Channel_data[THROTTLE] = CHANNEL_MIN_100;
+    if (mode3d)
+      Channel_data[THROTTLE] = (CHANNEL_MAX_100 - CHANNEL_MIN_100)/2 + CHANNEL_MIN_100;
+    else
+      Channel_data[THROTTLE] = CHANNEL_MIN_100;
   }
 
   if (millis() - last_signal > 1000) { // stop sending after a one second period of not receiving any updates from the basestation
@@ -1451,6 +1456,8 @@ void receive_protocol_info() {
     uint8_t id1 = Serial.read();
     while (!Serial.available());
     uint8_t id0 = Serial.read();
+    while (!Serial.available());
+    mode3d = Serial.read();
     while (!Serial.available());
     uint8_t h2 = Serial.read(); // footer 68
 
