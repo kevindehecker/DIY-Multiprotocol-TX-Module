@@ -1449,15 +1449,14 @@ void receive_protocol_info() {
     while (!Serial.available());
     uint8_t h1 = Serial.read(); // header 67
     while (!Serial.available());
-    uint8_t id3 = Serial.read();
+    mode3d = Serial.read(); // used to be id3, but changed to mode3d for backwards compatibility
+    uint8_t id3 = 0;
     while (!Serial.available());
     uint8_t id2 = Serial.read();
     while (!Serial.available());
     uint8_t id1 = Serial.read();
     while (!Serial.available());
-    uint8_t id0 = Serial.read();
-    while (!Serial.available());
-    mode3d = Serial.read();
+    uint8_t id0 = Serial.read();    
     while (!Serial.available());
     uint8_t h2 = Serial.read(); // footer 68
 
