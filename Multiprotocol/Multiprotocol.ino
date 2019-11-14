@@ -373,7 +373,6 @@ void setup()
 			((PROTO_DIAL4_ipr & _BV(PROTO_DIAL4_pin)) ? 0 : 8);
 	#endif
 	//mode_select=1;
-    debugln("Multiprotocol version: %d.%d.%d.%d", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION, VERSION_PATCH_LEVEL);  
     debugln("Protocol selection switch reads as %d", mode_select);
 
 	#ifdef ENABLE_PPM
@@ -1437,14 +1436,15 @@ void update_serial_data()
 
 
 void receive_protocol_info() {
-    //receive bind id from base station
+  //receive bind id from base station
   while(1){
     debugln("Specify bind ID...");
     uint8_t h0 = 0;
     while(h0!=66){
       while (!Serial.available());
          h0= Serial.read(); // header 66 
-         debugln("Error: I want 66 but I got this byte: %d",h0);
+         if (h0 != 66)
+            debugln("Uh oh: I want 66 but I got this byte: %d",h0);
     }
     while (!Serial.available());
     uint8_t h1 = Serial.read(); // header 67
@@ -1469,6 +1469,7 @@ void receive_protocol_info() {
       debugln("Bind id package not recognized.... retry");
     }
   }
+  debugln("Multiprotocol version: %d.%d.%d.%d", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION, VERSION_PATCH_LEVEL);  
 }
 
 void modules_reset()
