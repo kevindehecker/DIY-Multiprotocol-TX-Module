@@ -1,0 +1,8 @@
+{
+    "sketch": "Multiprotocol.ino",
+    "port": "/dev/ttyACM0",
+    "board": "multistm32f103c",
+    "output": "build",
+    "_debugger": "debug",
+    "configuration": "cpu=STM32F1"
+}
