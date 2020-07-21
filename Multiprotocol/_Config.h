@@ -56,7 +56,7 @@
 //Bind from channel enables you to bind when a specified channel is going from low to high. This feature is only active
 // if you specify AUTOBIND in PPM mode or set AutoBind to YES for serial mode.
 //Comment to globaly disable the bind feature from a channel.
-#define ENABLE_BIND_CH
+// #define ENABLE_BIND_CH
 //Set the channel number used for bind. Default is 16.
 #define BIND_CH	16
 
@@ -74,10 +74,10 @@
 //4-in-1 modules have the A7105, CYRF6936, CC2500 and NRF24L01 RF chips installed
 //5-in-1 modules have all RF chips installed
 //!!!If a RF chip is present it MUST be marked as installed!!! or weird things will happen you have been warned.
-#define A7105_INSTALLED
-#define CYRF6936_INSTALLED
+// #define A7105_INSTALLED
+// #define CYRF6936_INSTALLED
 #define CC2500_INSTALLED
-#define NRF24L01_INSTALLED
+// #define NRF24L01_INSTALLED
 //#define SX1276_INSTALLED		// only supported on STM32 modules
 
 //Uncomment (remove //) if you have an internal 5-in-1 Multi module.
@@ -148,7 +148,7 @@
 // then you can force the ID to a certain known value using the lines below.
 //Default is commented, you should uncoment only for test purpose or if you know exactly what you are doing!!!
 //The 8 numbers below can be anything between 0...9 and A..F
-//#define FORCE_GLOBAL_ID	0x12345678
+#define FORCE_GLOBAL_ID	0x66666666
 
 //Protocols using the CYRF6936 (DSM, Devo, Walkera...) are using the CYRF ID instead which should prevent duplicated IDs.
 //If you have 2 Multi modules which you want to share the same ID so you can use either to control the same RC model
@@ -252,7 +252,7 @@
 //---------------------
 //The DSM protocol is using by default the Spektrum throw of 1100..1900us @100% and 1000..2000us @125%.
 // For more throw, 1024..1976us @100% and 904..2096us @125%, remove the "//" on the line below. Be aware that too much throw can damage some UMX servos. To achieve standard throw in this mode use a channel weight of 84%.
-//#define DSM_MAX_THROW
+#define DSM_MAX_THROW
 //Some models (X-Vert, Blade 230S...) require a special value to instant stop the motor(s).
 // You can disable this feature by adding "//" on the line below. You have to specify which channel (14 by default) will be used to kill the throttle channel.
 // If the channel 14 is above -50% the throttle is untouched but if it is between -50% and -100%, the throttle output will be forced between -100% and -150%.
@@ -271,7 +271,7 @@
 //In Serial mode failsafe is configured on the radio itself.
 //In PPM mode and only after the module is up and fully operational, press the bind button for at least 5sec to send the current stick positions as failsafe to the RX.
 //If you want to disable failsafe globally comment the line below using "//".
-#define FAILSAFE_ENABLE
+// #define FAILSAFE_ENABLE
 
 /**************************/
 /*** TELEMETRY SETTINGS ***/
@@ -339,7 +339,7 @@
 /*************************/
 //In this section you can configure all details about PPM.
 //If you do not plan to use the PPM mode comment this line using "//" to save Flash space, you don't need to configure anything below in this case
-#define ENABLE_PPM
+// #define ENABLE_PPM
 
 /** TX END POINTS **/
 //It is important for the module to know the endpoints of your radio.

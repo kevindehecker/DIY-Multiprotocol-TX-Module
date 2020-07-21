@@ -23,7 +23,7 @@
 #include <avr/pgmspace.h>
 
 //#define DEBUG_PIN		// Use pin TX for AVR and SPI_CS for STM32 => DEBUG_PIN_on, DEBUG_PIN_off, DEBUG_PIN_toggle
-//#define DEBUG_SERIAL	// Only for STM32_BOARD, compiled with Upload method "Serial"->usart1, "STM32duino bootloader"->USB serial
+#define DEBUG_SERIAL	// Only for STM32_BOARD, compiled with Upload method "Serial"->usart1, "STM32duino bootloader"->USB serial
 
 #ifdef __arm__			// Let's automatically select the board if arm is selected
 	#define STM32_BOARD
@@ -173,7 +173,8 @@ uint8_t option;
 uint8_t cur_protocol[3];
 uint8_t prev_option;
 uint8_t prev_power=0xFD; // unused power value
-uint8_t  RX_num;
+uint8_t  RX_num = 0;
+bool mode3d = true;
 
 //Serial RX variables
 #define BAUD 100000
@@ -262,6 +263,10 @@ uint8_t packet_in[TELEMETRY_BUFFER_SIZE];//telemetry receiving packets
 typedef uint16_t (*void_function_t) (void);//pointer to a function with no parameters which return an uint16_t integer
 void_function_t remote_callback = 0;
 
+//Pats functions:
+void receive_protocol_info();
+void check_pats_watchdog();
+
 // Init
 void setup()
 {
@@ -269,25 +274,9 @@ void setup()
 	#ifdef DEBUG_SERIAL
 		Serial.begin(115200,SERIAL_8N1);
 
-		// Wait up to 30s for a serial connection; double-blink the LED while we wait
-		unsigned long currMillis = millis();
-		unsigned long initMillis = currMillis;
-		pinMode(LED_pin,OUTPUT);
-		LED_off;
-		while (!Serial && (currMillis - initMillis) <= 30000) {
-			LED_on;
-			delay(100);
-			LED_off;
-			delay(100);
-			LED_on;
-			delay(100);
-			LED_off;
-			delay(500);
-			currMillis = millis();
-		}
-
+		while (!Serial); // Wait for ever for the serial port to connect..
 		delay(50);  // Brief delay for FTDI debugging
-		debugln("Multiprotocol version: %d.%d.%d.%d", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION, VERSION_PATCH_LEVEL);
+		debugln("Multi module initializing!" );	 // This message does not always never arrive, e.g. in screen
 	#endif
 
 	// General pinout
@@ -498,10 +487,7 @@ void setup()
 	#endif
 #endif
 
-	// Read or create protocol id
-	MProtocol_id_master=random_id(EEPROM_ID_OFFSET,false);
-
-	debugln("Module Id: %lx", MProtocol_id_master);
+	receive_protocol_info();
 	
 #ifdef ENABLE_PPM
 	//Protocol and interrupts initialization
@@ -614,7 +600,7 @@ void setup()
 			#endif
 		#endif //ENABLE_SERIAL
 	}
-	debugln("Init complete");
+	debugln("Init complete and ready to PATS");
 	LED2_on;
 }
 
@@ -627,13 +613,15 @@ void loop()
 
 	while(1)
 	{
-		while(remote_callback==0 || IS_WAIT_BIND_on || IS_INPUT_SIGNAL_off)
+		while(remote_callback==0 || IS_WAIT_BIND_on || IS_INPUT_SIGNAL_off) {
+			Read_Uart1();
 			if(!Update_All())
 			{
 				cli();								// Disable global int due to RW of 16 bits registers
 				OCR1A=TCNT1;						// Callback should already have been called... Use "now" as new sync point.
 				sei();								// Enable global int
 			}
+		}
 		TX_MAIN_PAUSE_on;
 		tx_pause();
 		next_callback=remote_callback()<<1;
@@ -708,6 +696,7 @@ bool Update_All()
 			INPUT_SIGNAL_on;								//valid signal received
 			last_signal=millis();
 		}
+		check_pats_watchdog();
 	#endif //ENABLE_SERIAL
 	#ifdef ENABLE_PPM
 		if(mode_select!=MODE_SERIAL && IS_PPM_FLAG_on)		// PPM mode and a full frame has been received
@@ -1026,6 +1015,7 @@ inline void tx_resume()
 static void protocol_init()
 {
 	static uint16_t next_callback;
+	Serial.println("Protocol init");
 	if(IS_WAIT_BIND_off)
 	{
 		remote_callback = 0;			// No protocol
@@ -2452,6 +2442,103 @@ static void __attribute__((unused)) calc_fh_channels(uint8_t num_ch)
 			UCSR0B |= _BV(RXCIE0) ;									// RX interrupt enable
 		#endif
 	}
+
+
+/************PATS FUNCTIONS***************/
+void check_pats_watchdog() {
+  if (millis() - last_signal > 100) { // assume something went wrong and put throttle to 0
+    if (mode3d)
+      Channel_data[THROTTLE] = (CHANNEL_MAX_100 - CHANNEL_MIN_100)/2 + CHANNEL_MIN_100;
+    else
+      Channel_data[THROTTLE] = CHANNEL_MIN_100;
+  }
+
+  if (millis() - last_signal > 1000) { // stop sending after a one second period of not receiving any updates from the basestation
+    while (!Serial.available()) {
+      LED_on;
+      LED2_off;
+      delayMilliseconds(100);
+      LED_off;
+      LED2_on;
+      delayMilliseconds(100);
+      if (millis() - last_signal > 3000) { // after 10s completely reset the arduino. Then it will then re-ask for init settings.
+          LED2_off;
+          LED_off;
+          receive_protocol_info();
+          protocol_init();
+      }
+    }
+    last_signal = millis();;
+  }
+}
+
+void receive_protocol_info() {
+  //receive bind id from base station
+  while(1){
+    debugln("Specify bind ID...");
+    uint8_t h0 = 0;
+    while(h0!=66){
+      while (!Serial.available());
+         h0= Serial.read(); // header 66 
+         if (h0 != 66)
+            debugln("Uh oh: I want 66 but I got this byte: %d",h0);
+    }
+    while (!Serial.available());
+    uint8_t h1 = Serial.read(); // header 67
+    while (!Serial.available());
+    mode3d = Serial.read(); // used to be id3, but changed to mode3d for backwards compatibility
+    uint8_t id3 = 0;
+    while (!Serial.available());
+    uint8_t id2 = Serial.read();
+    while (!Serial.available());
+    uint8_t id1 = Serial.read();
+    while (!Serial.available());
+    uint8_t id0 = Serial.read();    
+    while (!Serial.available());
+    uint8_t h2 = Serial.read(); // footer 68
+
+    MProtocol_id_master = id0 + (id1<<8) + (id2 << 16) + (id3 << 24);
+    if (h0 == 66 && h1 == 67 && h2 == 68){
+      debugln("ID received: %d , %d , %d , %d  -> %lx",id3,id2,id1,id0, MProtocol_id_master);
+      break;
+    } else {
+      debugln("ERROR: received: %d, %d, %d, %d , %d , %d , %d  -> %lx",h0,h1,h2,id3,id2,id1,id0, MProtocol_id_master);
+      debugln("Bind id package not recognized.... retry");
+    }
+  }
+  debugln("Multiprotocol version: %d.%d.%d.%d", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION, VERSION_PATCH_LEVEL);  
+}
+
+void Read_Uart1() {
+  
+  while (Serial.available()) {
+    static uint8_t idx=0;
+    if(idx==0||discard_frame==1) { // Let's try to sync at this point
+      idx=0;discard_frame=0;
+      RX_MISSED_BUFF_off;     // If rx_buff was good it's not anymore...
+      rx_buff[0]=Serial.read();
+      #ifdef FAILSAFE_ENABLE
+        if((rx_buff[0]&0xFC)==0x54) {// If 1st byte is 0x54, 0x55, 0x56 or 0x57 it looks ok
+      #else
+        if((rx_buff[0]&0xFE)==0x54) {// If 1st byte is 0x54 or 0x55 it looks ok
+      #endif
+        idx++;
+      }
+    } else {
+      rx_buff[idx++]=Serial.read();    // Store received byte
+      if(idx>=RXBUFFER_SIZE) { // A full frame has been received
+        if(!IS_RX_DONOTUPDATE_on) { //Good frame received and main is not working on the buffer
+          memcpy((void*)rx_ok_buff,(const void*)rx_buff,RXBUFFER_SIZE);// Duplicate the buffer
+          LED_toggle; // red
+          RX_FLAG_on;     // flag for main to process servo data
+        } else
+          RX_MISSED_BUFF_on;  // notify that rx_buff is good
+        discard_frame=1;    // start again
+      }
+    }
+  }
+}
+/************PATS FUNCTIONS***************/
 
 	//Serial timer
 	#ifdef ORANGE_TX
