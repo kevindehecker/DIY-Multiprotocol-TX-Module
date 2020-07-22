@@ -13,7 +13,7 @@
  along with Multiprotocol.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#if defined(FRSKYX_CC2500_INO)
+// #if defined(FRSKYX_CC2500_INO)
 
 #include "iface_cc2500.h"
 
@@ -287,4 +287,4 @@ uint16_t initFrSkyX()
 	FrSkyX_telem_init();
 	return 10000;
 }
-#endif
+// #endif

@@ -13,7 +13,6 @@
  along with Multiprotocol.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#if defined(FRSKYD_CC2500_INO)
 
 #include "iface_cc2500.h"
 
@@ -216,4 +215,3 @@ uint16_t ReadFrSky_2way()
 	}				
 	return state == FRSKY_DATA4 ? 7500 : 9000;		
 }
-#endif

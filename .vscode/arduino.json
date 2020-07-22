@@ -1,4 +1,6 @@
 {
     "board": "multi4in1:STM32F1:multistm32f103c",
-    "configuration": "debug_option=none"
+    "configuration": "debug_option=none",
+    "sketch": "Multiprotocol/Multiprotocol.ino",
+    "port": "/dev/ttyACM0"
 }

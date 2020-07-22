@@ -537,7 +537,7 @@ enum MultiPacketTypes
 //********************
 //** Debug messages **
 //********************
-#if defined(STM32_BOARD) && (defined (DEBUG_SERIAL) || defined (ARDUINO_MULTI_DEBUG))
+#if defined(STM32_BOARD) && (defined (DEBUG_SERIAL) || defined (ARDUINO_MULTI_DEBUG) || defined (PATS_SERIAL))
 	uint16_t debug_time=0;
 	#define debug(msg, ...)  {char debug_buf[64]; sprintf(debug_buf, msg, ##__VA_ARGS__); Serial.write(debug_buf);}
 	#define debugln(msg, ...)  {char debug_buf[64]; sprintf(debug_buf, msg "\r\n", ##__VA_ARGS__); Serial.write(debug_buf);}

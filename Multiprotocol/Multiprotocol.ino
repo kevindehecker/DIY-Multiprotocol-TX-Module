@@ -23,7 +23,8 @@
 #include <avr/pgmspace.h>
 
 //#define DEBUG_PIN		// Use pin TX for AVR and SPI_CS for STM32 => DEBUG_PIN_on, DEBUG_PIN_off, DEBUG_PIN_toggle
-#define DEBUG_SERIAL	// Only for STM32_BOARD, compiled with Upload method "Serial"->usart1, "STM32duino bootloader"->USB serial
+//#define DEBUG_SERIAL	// Only for STM32_BOARD, compiled with Upload method "Serial"->usart1, "STM32duino bootloader"->USB serial
+#define PATS_SERIAL
 
 #ifdef __arm__			// Let's automatically select the board if arm is selected
 	#define STM32_BOARD
@@ -174,7 +175,9 @@ uint8_t cur_protocol[3];
 uint8_t prev_option;
 uint8_t prev_power=0xFD; // unused power value
 uint8_t  RX_num = 0;
-bool mode3d = true;
+bool mode3d = false;
+bool receiving_protocol_info = false;
+bool rc_serial_override = false;
 
 //Serial RX variables
 #define BAUD 100000
@@ -271,13 +274,7 @@ void check_pats_watchdog();
 void setup()
 {
 	// Setup diagnostic uart before anything else
-	#ifdef DEBUG_SERIAL
-		Serial.begin(115200,SERIAL_8N1);
 
-		while (!Serial); // Wait for ever for the serial port to connect..
-		delay(50);  // Brief delay for FTDI debugging
-		debugln("Multi module initializing!" );	 // This message does not always never arrive, e.g. in screen
-	#endif
 
 	// General pinout
 	#ifdef ORANGE_TX
@@ -487,8 +484,6 @@ void setup()
 	#endif
 #endif
 
-	receive_protocol_info();
-	
 #ifdef ENABLE_PPM
 	//Protocol and interrupts initialization
 	if(mode_select != MODE_SERIAL)
@@ -600,6 +595,22 @@ void setup()
 			#endif
 		#endif //ENABLE_SERIAL
 	}
+
+	#ifdef PATS_SERIAL
+		Serial.begin(115200,SERIAL_8N1);
+
+		while (!Serial && !rc_serial_override); // Wait for ever for the serial port to connect..
+		delay(50);  // Brief delay for FTDI debugging
+		debugln("Multi module initializing!" );	 // This message does not always never arrive, e.g. in screen
+	#endif
+
+	if (!rc_serial_override)
+		receive_protocol_info();
+	else
+		MProtocol_id_master = 3;
+
+
+
 	debugln("Init complete and ready to PATS");
 	LED2_on;
 }
@@ -610,18 +621,28 @@ void loop()
 { 
 	uint16_t next_callback, diff;
 	uint8_t count=0;
-
+	debugln("Starting the loop");
 	while(1)
 	{
+ 		Read_Uart1(); // should be in an interrupt but cant seem to get that working
+		bool first_time = true;
 		while(remote_callback==0 || IS_WAIT_BIND_on || IS_INPUT_SIGNAL_off) {
-			Read_Uart1();
 			if(!Update_All())
 			{
 				cli();								// Disable global int due to RW of 16 bits registers
 				OCR1A=TCNT1;						// Callback should already have been called... Use "now" as new sync point.
 				sei();								// Enable global int
 			}
+			if (!first_time)
+ 				Read_Uart1();
+			first_time = false;
+
+			#ifdef PATS_SERIAL
+				if (!rc_serial_override)
+					check_pats_watchdog();
+			#endif
 		}
+
 		TX_MAIN_PAUSE_on;
 		tx_pause();
 		next_callback=remote_callback()<<1;
@@ -651,6 +672,7 @@ void loop()
 					Update_All();
 				}
 			}
+			first_time = true;
 			#ifndef STM32_BOARD
 				while((TIFR1 & OCF1A_bm) == 0)
 			#else
@@ -676,6 +698,9 @@ void loop()
 					diff=OCR1A-TCNT1;				// Calc the time difference
 					sei();							// Enable global int
 				}
+				if (!first_time)
+ 					Read_Uart1();
+				first_time = false;
 			}
 		}			
 	}
@@ -689,14 +714,14 @@ bool Update_All()
 				pollBoot() ;
 			else
 		#endif
-		if(mode_select==MODE_SERIAL && IS_RX_FLAG_on)		// Serial mode and something has been received
-		{
-			update_serial_data();							// Update protocol and data
-			update_channels_aux();
-			INPUT_SIGNAL_on;								//valid signal received
-			last_signal=millis();
-		}
-		check_pats_watchdog();
+				if(mode_select==MODE_SERIAL && IS_RX_FLAG_on)		// Serial mode and something has been received
+				{
+					LED2_toggle;
+					update_serial_data();							// Update protocol and data
+					update_channels_aux();
+					INPUT_SIGNAL_on;								//valid signal received
+					last_signal=millis();
+				}
 	#endif //ENABLE_SERIAL
 	#ifdef ENABLE_PPM
 		if(mode_select!=MODE_SERIAL && IS_PPM_FLAG_on)		// PPM mode and a full frame has been received
@@ -1659,6 +1684,7 @@ static void protocol_init()
 	#endif	
 	sei();										// enable global int
 	BIND_BUTTON_FLAG_off;						// do not bind/reset id anymore even if protocol change
+	debugln("Protocol DONE");
 }
 
 void update_serial_data()
@@ -1822,6 +1848,7 @@ void update_serial_data()
 	else
 		if( ((rx_ok_buff[1]&0x80)!=0) && ((cur_protocol[1]&0x80)==0) )		// Bind flag has been set
 		{ // Restart protocol with bind
+			debugln("Bind!");
 			CHANGE_PROTOCOL_FLAG_on;
 			BIND_IN_PROGRESS;
 		}
@@ -1829,8 +1856,10 @@ void update_serial_data()
 			if( ((rx_ok_buff[1]&0x80)==0) && ((cur_protocol[1]&0x80)!=0) )	// Bind flag has been reset
 			{ // Request protocol to end bind
 				#if defined(FRSKYD_CC2500_INO) || defined(FRSKYL_CC2500_INO) || defined(FRSKYX_CC2500_INO) || defined(FRSKYV_CC2500_INO) || defined(AFHDS2A_A7105_INO) || defined(FRSKYR9_SX1276_INO) || defined(DSM_RX_CYRF6936_INO)
-				if(protocol==PROTO_FRSKYD || protocol==PROTO_FRSKYL || protocol==PROTO_FRSKYX || protocol==PROTO_FRSKYX2 || protocol==PROTO_FRSKYV || protocol==PROTO_AFHDS2A || protocol==PROTO_FRSKY_R9 || protocol==PROTO_DSM_RX)
+				if(protocol==PROTO_FRSKYD || protocol==PROTO_FRSKYL || protocol==PROTO_FRSKYX || protocol==PROTO_FRSKYX2 || protocol==PROTO_FRSKYV || protocol==PROTO_AFHDS2A || protocol==PROTO_FRSKY_R9 || protocol==PROTO_DSM_RX){
+					debugln("BIND DONE")
 					BIND_DONE;
+				}
 				else
 				#endif
 				if(bind_counter>2)
@@ -2373,6 +2402,7 @@ static void __attribute__((unused)) calc_fh_channels(uint8_t num_ch)
 			if((UCSR0A&0x1C)==0)									// Check frame error, data overrun and parity error
 		#endif
 		{ // received byte is ok to process
+			rc_serial_override = true;
 			if(rx_idx==0||discard_frame==true)
 			{	// Let's try to sync at this point
 				RX_MISSED_BUFF_off;									// If rx_buff was good it's not anymore...
@@ -2454,6 +2484,7 @@ void check_pats_watchdog() {
   }
 
   if (millis() - last_signal > 1000) { // stop sending after a one second period of not receiving any updates from the basestation
+    debugln("Not receiving data from usb!")
     while (!Serial.available()) {
       LED_on;
       LED2_off;
@@ -2473,45 +2504,52 @@ void check_pats_watchdog() {
 }
 
 void receive_protocol_info() {
-  //receive bind id from base station
-  while(1){
-    debugln("Specify bind ID...");
-    uint8_t h0 = 0;
-    while(h0!=66){
-      while (!Serial.available());
-         h0= Serial.read(); // header 66 
-         if (h0 != 66)
-            debugln("Uh oh: I want 66 but I got this byte: %d",h0);
-    }
-    while (!Serial.available());
-    uint8_t h1 = Serial.read(); // header 67
-    while (!Serial.available());
-    mode3d = Serial.read(); // used to be id3, but changed to mode3d for backwards compatibility
-    uint8_t id3 = 0;
-    while (!Serial.available());
-    uint8_t id2 = Serial.read();
-    while (!Serial.available());
-    uint8_t id1 = Serial.read();
-    while (!Serial.available());
-    uint8_t id0 = Serial.read();    
-    while (!Serial.available());
-    uint8_t h2 = Serial.read(); // footer 68
+  #ifdef PATS_SERIAL
+	receiving_protocol_info = 1;
+	//receive bind id from base station
+	while(1){
+		debugln("Specify bind ID...");
+		uint8_t h0 = 0;
+		while(h0!=66){
+		while (!Serial.available());
+			h0= Serial.read(); // header 66 
+			if (h0 != 66)
+				debugln("Uh oh: I want 66 but I got this byte: %d",h0);
+		}
+		while (!Serial.available());
+		uint8_t h1 = Serial.read(); // header 67
+		while (!Serial.available());
+		mode3d = Serial.read(); // used to be id3, but changed to mode3d for backwards compatibility
+		uint8_t id3 = 0;
+		while (!Serial.available());
+		uint8_t id2 = Serial.read();
+		while (!Serial.available());
+		uint8_t id1 = Serial.read();
+		while (!Serial.available());
+		uint8_t id0 = Serial.read();    
+		while (!Serial.available());
+		uint8_t h2 = Serial.read(); // footer 68
 
-    MProtocol_id_master = id0 + (id1<<8) + (id2 << 16) + (id3 << 24);
-    if (h0 == 66 && h1 == 67 && h2 == 68){
-      debugln("ID received: %d , %d , %d , %d  -> %lx",id3,id2,id1,id0, MProtocol_id_master);
-      break;
-    } else {
-      debugln("ERROR: received: %d, %d, %d, %d , %d , %d , %d  -> %lx",h0,h1,h2,id3,id2,id1,id0, MProtocol_id_master);
-      debugln("Bind id package not recognized.... retry");
-    }
-  }
-  debugln("Multiprotocol version: %d.%d.%d.%d", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION, VERSION_PATCH_LEVEL);  
+		MProtocol_id_master = id0 + (id1<<8) + (id2 << 16) + (id3 << 24);
+		if (h0 == 66 && h1 == 67 && h2 == 68){
+		debugln("ID received: %d , %d , %d , %d  -> %lx, mode3d: %d",id3,id2,id1,id0, MProtocol_id_master,mode3d);
+		break;
+		} else {
+		debugln("ERROR: received: %d, %d, %d, %d , %d , %d , %d  -> %lx",h0,h1,h2,id3,id2,id1,id0, MProtocol_id_master);
+		debugln("Bind id package not recognized.... retry");
+		}
+	}
+	debugln("Multiprotocol version: %d.%d.%d.%d", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION, VERSION_PATCH_LEVEL);  
+	receiving_protocol_info = 0;
+	debugln("receiving_protocol_info: %d", receiving_protocol_info);
+  #else
+  	MProtocol_id_master = 4;
+  #endif
 }
 
 void Read_Uart1() {
-  
-  while (Serial.available()) {
+#ifdef PATS_SERIAL
+  while (Serial.available() && !receiving_protocol_info && !rc_serial_override) {
     static uint8_t idx=0;
     if(idx==0||discard_frame==1) { // Let's try to sync at this point
       idx=0;discard_frame=0;
@@ -2525,18 +2563,20 @@ void Read_Uart1() {
         idx++;
       }
     } else {
-      rx_buff[idx++]=Serial.read();    // Store received byte
-      if(idx>=RXBUFFER_SIZE) { // A full frame has been received
-        if(!IS_RX_DONOTUPDATE_on) { //Good frame received and main is not working on the buffer
-          memcpy((void*)rx_ok_buff,(const void*)rx_buff,RXBUFFER_SIZE);// Duplicate the buffer
-          LED_toggle; // red
-          RX_FLAG_on;     // flag for main to process servo data
-        } else
-          RX_MISSED_BUFF_on;  // notify that rx_buff is good
+      	rx_buff[idx++]=Serial.read();    // Store received byte
+      	if(idx>=RXBUFFER_SIZE) { // A full frame has been received
+        	if(!IS_RX_DONOTUPDATE_on) { //Good frame received and main is not working on the buffer
+				rx_len=idx;
+				memcpy((void*)rx_ok_buff,(const void*)rx_buff,idx);// Duplicate the buffer
+				LED_toggle; // red
+				RX_FLAG_on;     // flag for main to process servo data
+        	} else
+	          	RX_MISSED_BUFF_on;  // notify that rx_buff is good
         discard_frame=1;    // start again
       }
     }
   }
+#endif
 }
 /************PATS FUNCTIONS***************/
 

@@ -419,7 +419,9 @@ void Frsky_init_clone(void)
 				}
 				else if (FrSkyX_TX_IN_Seq & 0x04)
 				{//Retransmit the requested packet
-					debugln("Retry:%d",FrSkyX_TX_IN_Seq&0x03);
+					#ifndef PATS_SERIAL
+						debugln("Retry:%d",FrSkyX_TX_IN_Seq&0x03);
+					#endif
 					packet[start] |= FrSkyX_TX_IN_Seq&0x03;
 					packet[start+1]  = FrSkyX_TX_Frames[FrSkyX_TX_IN_Seq&0x03].count;
 					for (uint8_t i=start+2;i<start+2+FrSkyX_TX_Frames[FrSkyX_TX_IN_Seq&0x03].count;i++)
