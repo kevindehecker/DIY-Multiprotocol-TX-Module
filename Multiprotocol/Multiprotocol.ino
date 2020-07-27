@@ -2547,6 +2547,21 @@ void receive_protocol_info() {
   #endif
 }
 
+void Send_sensor_data(uint16_t id, float data_f)
+{
+	uint32_t data_int = 0;
+  
+	if(data_f < 0 )
+	{
+		data_int |= 0x80000000;	// bit that tells if the data is negative
+		data_f *= -1;					    // invert, cant send negative values
+	}
+
+  data_int |= static_cast<uint32_t>(data_f * 100);
+
+	debugln("sensor: %04X%08X",id,data_int);
+}
+
 void Read_Uart1() {
 #ifdef PATS_SERIAL
   while (Serial.available() && !receiving_protocol_info && !rc_serial_override) {

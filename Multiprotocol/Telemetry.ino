@@ -671,6 +671,11 @@ const uint8_t PROGMEM Indices[] = {	0x00, 0xA1, 0x22, 0x83, 0xE4, 0x45,
 			crc_s &= 0x00ff;
 		}
 		Serial_write(0xff - crc_s);
+    uint16_t test_id = 0x0740;
+    float test_data = -900.05;
+   
+		Send_sensor_data(test_id, test_data);
+   
 	}
 #else
 	void sportSend(uint8_t *p)
