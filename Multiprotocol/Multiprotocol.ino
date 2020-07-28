@@ -659,7 +659,7 @@ void loop()
 		sei();										// Enable global int
 		if((diff&0x8000) && !(next_callback&0x8000))
 		{ // Negative result=callback should already have been called... 
-			debugln("Short CB:%d",next_callback);
+			//debugln("Short CB:%d",next_callback);
 		}
 		else
 		{
@@ -2560,6 +2560,29 @@ void Send_sensor_data(uint16_t id, float data_f)
   data_int |= static_cast<uint32_t>(data_f * 100);
 
 	debugln("sensor: %04X%08X",id,data_int);
+}
+
+void Multimodule_to_Pats(uint8_t *pkg) // 00 00 00 00 00 00 00
+{
+	uint16_t id;
+	int data_int = 0;
+	float data_f;		
+
+	if(pkg[0] == 0x1B)
+	{
+		id = (pkg[3] << 8) | pkg[2];
+//		debugln("ID = %X", id);
+		data_int = (pkg[7] << 24) | (pkg[6] << 16) | (pkg[5] << 8) | pkg[4];
+//		debugln("data_int = %X", data_int);
+		data_f = (float)data_int;
+    if(id != 0x0120 && id != 0x0130 && id != 0x0500 && id != 0x0F101)
+    {
+      data_f /= 100;
+    }
+//		debugln("data_f = %f", data_f);
+
+		Send_sensor_data(id, data_f);
+	}
 }
 
 void Read_Uart1() {

@@ -216,8 +216,8 @@ uint16_t ReadFrSkyX()
 					if(len==17 && (protocol==PROTO_FRSKYX || (protocol==PROTO_FRSKYX2 && (packet_in[len-1] & 0x80))) )
 					{//Telemetry received with valid crc for FRSKYX2
 						//Debug
-						for(uint8_t i=0;i<len;i++)
-							debug(" %02X",packet_in[i]);
+						//for(uint8_t i=0;i<len;i++)
+							//debug(" %02X",packet_in[i]);
 						if(frsky_process_telemetry(packet_in,len))			//Check and process telemetry packet
 						{//good packet received
 							pps_counter++;
@@ -225,7 +225,7 @@ uint16_t ReadFrSkyX()
 								TX_LQI++;									//Recover telemetry right away
 						}
 					}
-					debugln("");
+					//debugln("");
 				}
 				if (millis() - pps_timer >= 900)
 				{//1 packet every 9ms

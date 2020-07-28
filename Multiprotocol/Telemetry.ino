@@ -660,21 +660,23 @@ const uint8_t PROGMEM Indices[] = {	0x00, 0xA1, 0x22, 0x83, 0xE4, 0x45,
 		multi_send_header(MULTI_TELEMETRY_SPORT, 9);
 		uint16_t crc_s = 0;
 		uint8_t x = p[0] ;
+    //debug("p[i] =");
 		if ( x <= 0x1B )
 			x = pgm_read_byte_near( &Indices[x] ) ;
 		Serial_write(x) ;
+    	//debug(" %02X", x);
 		for (uint8_t i = 1; i < 8; i++)
 		{
 			Serial_write(p[i]);
+      //debug(" %02X", p[i]);
 			crc_s += p[i];			//0-1FF
 			crc_s += crc_s >> 8;	//0-100
 			crc_s &= 0x00ff;
 		}
 		Serial_write(0xff - crc_s);
-    uint16_t test_id = 0x0740;
-    float test_data = -900.05;
+    //debugln(" ");
    
-		Send_sensor_data(test_id, test_data);
+		Multimodule_to_Pats(p);
    
 	}
 #else
@@ -770,6 +772,11 @@ void sportSendFrame()
 				return;
 			}		
 	}
+	// debug("frame =");
+	// for (int i =0; i< 18; i++)
+	// 	debug(" %02X", frame[i]);
+
+	// debugln("");
 	sportSend(frame);
 }	
 
@@ -814,10 +821,12 @@ void proces_sport_data(uint8_t data)
 				pktx1[dest++] = pktx[i] ;	// Triple buffer
 			Sport_Data += 1 ;//ok to send
 		}
-//		else
-//		{
-//			// Overrun
-//		}
+
+		
+		else
+		{
+			// Overrun
+		}
 		pass = 0;//reset
 	}
 }
@@ -891,9 +900,15 @@ void TelemetryUpdate()
 				p = &FrSkyX_RX_Frames[FrSkyX_RX_NextFrame] ;
 				if ( p->valid )
 				{
-					count = p->count ;
-					for (uint8_t i=0; i < count ; i++)
+          count = p->count ;
+        //   if(count > 0)
+            // debug("payload =");
+
+					for (uint8_t i=0; i < count ; i++){
+						// debug(" %02X", p->payload[i]);
 						proces_sport_data(p->payload[i]) ;
+					}
+					// debugln("");
 					p->valid = false ;	// Sent
 					FrSkyX_RX_NextFrame = ( FrSkyX_RX_NextFrame + 1 ) & 3 ;
 				}
