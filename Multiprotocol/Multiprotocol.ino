@@ -2574,6 +2574,14 @@ void Multimodule_to_Pats(uint8_t *pkg) // 00 00 00 00 00 00 00
 //		debugln("ID = %X", id);
 		data_int = (pkg[7] << 24) | (pkg[6] << 16) | (pkg[5] << 8) | pkg[4];
 //		debugln("data_int = %X", data_int);
+
+    if(id == 0x0750)
+    {
+      /* special treatment // data contains 2 pkg's */
+      debugln("sensor: %04X%08X",id,(uint32_t)data_int);
+      return;
+    }
+    
 		data_f = (float)data_int;
     if(id != 0x0120 && id != 0x0130 && id != 0x0500 && id != 0x0F101)
     {
