@@ -2547,50 +2547,21 @@ void receive_protocol_info() {
   #endif
 }
 
-void Send_sensor_data(uint16_t id, float data_f)
-{
-	uint32_t data_int = 0;
-  
-	if(data_f < 0 )
-	{
-		data_int |= 0x80000000;	// bit that tells if the data is negative
-		data_f *= -1;					    // invert, cant send negative values
-	}
 
-  data_int |= static_cast<uint32_t>(data_f * 100);
-
-	debugln("sensor: %04X%08X",id,data_int);
-}
-
-void Multimodule_to_Pats(uint8_t *pkg) // 00 00 00 00 00 00 00
-{
-	uint16_t id;
-	int data_int = 0;
-	float data_f;		
-
-	if(pkg[0] == 0x1B)
-	{
-		id = (pkg[3] << 8) | pkg[2];
-//		debugln("ID = %X", id);
-		data_int = (pkg[7] << 24) | (pkg[6] << 16) | (pkg[5] << 8) | pkg[4];
-//		debugln("data_int = %X", data_int);
-
-    if(id == 0x0750 || id == 0x0760)
-    {
-      /* special treatment // data contains 2 pkg's */
-      debugln("sensor: %04X%08X",id,(uint32_t)data_int);
-      return;
-    }
-
-    
-		data_f = (float)data_int;
-    if(id != 0x0120 && id != 0x0130 && id != 0x0500 && id != 0x0F101)
-    {
-      data_f /= 100;
-    }
-//		debugln("data_f = %f", data_f);
-
-		Send_sensor_data(id, data_f);
+void Multimodule_to_Pats(uint8_t *pkg) {
+	//There seem to be two packages, one starting with 0x1B and one with 0x98. The second one is just the rc status or something, added by the MM itself and not important.
+	// https://docs.google.com/spreadsheets/d/1pvq1-7MYiWkGndKt3JTSKTLNV0jfciD-ZCOBWDJtDXc/edit?usp=sharing
+	if(pkg[0] == 0x1B) { 
+		uint16_t * id = (uint16_t *) &(pkg[2]);
+    	if(*id == 0x0750 || *id == 0x0760) {
+			/* special treatment, data contains two int16's */
+			int16_t * d1 = (int16_t *) &(pkg[6]);
+			int16_t * d2 = (int16_t *) &(pkg[4]);
+			debugln("sensor:%d;%d;%d;",*id,*d1,*d2);
+		} else {
+			int32_t  * d = (int32_t *)&(pkg[4]);
+			debugln("sensor:%d;%d%;",*id,*d);
+		}
 	}
 }
 
