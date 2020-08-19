@@ -2616,7 +2616,7 @@ void receive_protocol_info() {
 
 
 void Multimodule_to_Pats(uint8_t *pkg) {
-	//There seem to be two packages, one starting with 0x1B and one with 0x98. The second one is just the rc status or something, added by the MM itself and not important.
+	//There seem to be two packages, one starting with 0x1B and one with 0x98. The second one contains rssi (sometimes).
 	// https://docs.google.com/spreadsheets/d/1pvq1-7MYiWkGndKt3JTSKTLNV0jfciD-ZCOBWDJtDXc/edit?usp=sharing
 #ifdef PATS_SERIAL
 
@@ -2632,6 +2632,9 @@ void Multimodule_to_Pats(uint8_t *pkg) {
 		 		int32_t  * d = (int32_t *)&(pkg[4]);
 		 		debugln("sensor:%d;%d%;",*id,*d);
 		 	}
+		} else if(pkg[0] == 0x98 && pkg[2] == 0x01 && pkg[3] == 0xf1 ) { // rssi 
+			uint16_t * id = (uint16_t *) &(pkg[2]);
+			debugln("sensor:%d;%d;%d;%d;%d;",*id,pkg[4],pkg[5],pkg[6],pkg[7]);
 		}
 	}
 #endif
