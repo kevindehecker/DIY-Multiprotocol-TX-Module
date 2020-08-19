@@ -2623,7 +2623,7 @@ void Multimodule_to_Pats(uint8_t *pkg) {
 	if (Serial && !receiving_protocol_info && !rc_serial_override && millis() - last_signal < 100) {
 		if(pkg[0] == 0x1B) { 
 			uint16_t * id = (uint16_t *) &(pkg[2]);
-			if(*id == 0x0750 || *id == 0x0760) {
+			if(*id == 0x0741 || *id == 0x0742) { // TODO: sent the bytes directly instead of this utterly stupid in between step. Or better yet, just sent the telemetry packages as they are already compiled by the MM
 		 		/* special treatment, data contains two int16's */
 		 		int16_t * d1 = (int16_t *) &(pkg[6]);
 		 		int16_t * d2 = (int16_t *) &(pkg[4]);
