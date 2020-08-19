@@ -190,7 +190,9 @@ uint16_t RLINK_callback()
 			if (millis() - pps_timer >= 2000)
 			{//1 packet every 20ms
 				pps_timer = millis();
+				#ifdef DEBUG_SERIAL
 				debugln("%d pps", pps_counter);
+				#endif
 				TX_LQI = pps_counter;						//Max=100%
 				pps_counter = 0;
 			}

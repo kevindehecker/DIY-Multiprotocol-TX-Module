@@ -26,6 +26,39 @@
 //#define DEBUG_SERIAL	// Only for STM32_BOARD, compiled with Upload method "Serial"->usart1, "STM32duino bootloader"->USB serial
 #define PATS_SERIAL
 
+/* memory mapping struct for System Control Block */
+typedef struct
+{
+  uint32_t CPUID;                        /*!< CPU ID Base Register                                     */
+  uint32_t ICSR;                         /*!< Interrupt Control State Register                         */
+  uint32_t VTOR;                         /*!< Vector Table Offset Register                             */
+  uint32_t AIRCR;                        /*!< Application Interrupt / Reset Control Register           */
+  uint32_t SCR;                          /*!< System Control Register                                  */
+  uint32_t CCR;                          /*!< Configuration Control Register                           */
+  uint8_t  SHP[12];                      /*!< System Handlers Priority Registers (4-7, 8-11, 12-15)    */
+  uint32_t SHCSR;                        /*!< System Handler Control and State Register                */
+  uint32_t CFSR;                         /*!< Configurable Fault Status Register                       */
+  uint32_t HFSR;                         /*!< Hard Fault Status Register                                       */
+  uint32_t DFSR;                         /*!< Debug Fault Status Register                                          */
+  uint32_t MMFAR;                        /*!< Mem Manage Address Register                                  */
+  uint32_t BFAR;                         /*!< Bus Fault Address Register                                   */
+  uint32_t AFSR;                         /*!< Auxiliary Fault Status Register                              */
+  uint32_t PFR[2];                       /*!< Processor Feature Register                               */
+  uint32_t DFR;                          /*!< Debug Feature Register                                   */
+  uint32_t ADR;                          /*!< Auxiliary Feature Register                               */
+  uint32_t MMFR[4];                      /*!< Memory Model Feature Register                            */
+  uint32_t ISAR[5];                      /*!< ISA Feature Register                                     */
+} SCB_Type;
+
+#define SCS_BASE            (0xE000E000)                              /*!< System Control Space Base Address    */
+#define SCB_BASE            (SCS_BASE +  0x0D00)                      /*!< System Control Block Base Address    */
+#define SCB                 ((SCB_Type *)           SCB_BASE)         /*!< SCB configuration struct             */
+
+#define NVIC_AIRCR_VECTKEY    (0x5FA << 16)   /*!< AIRCR Key for write access   */
+#define NVIC_SYSRESETREQ            2         /*!< System Reset Request         */
+
+
+
 #ifdef __arm__			// Let's automatically select the board if arm is selected
 	#define STM32_BOARD
 #endif
@@ -267,6 +300,8 @@ typedef uint16_t (*void_function_t) (void);//pointer to a function with no param
 void_function_t remote_callback = 0;
 
 //Pats functions:
+void wait_until_usb_bytes_available_connected();
+void wait_until_usb_connected();
 void receive_protocol_info();
 void check_pats_watchdog();
 
@@ -598,8 +633,7 @@ void setup()
 
 	#ifdef PATS_SERIAL
 		Serial.begin(115200,SERIAL_8N1);
-
-		while (!Serial && !rc_serial_override); // Wait for ever for the serial port to connect..
+		wait_until_usb_connected();
 		delay(50);  // Brief delay for FTDI debugging
 		debugln("Multi module initializing!" );	 // This message does not always never arrive, e.g. in screen
 	#endif
@@ -608,8 +642,6 @@ void setup()
 		receive_protocol_info();
 	else
 		MProtocol_id_master = 3;
-
-
 
 	debugln("Init complete and ready to PATS");
 	LED2_on;
@@ -622,6 +654,7 @@ void loop()
 	uint16_t next_callback, diff;
 	uint8_t count=0;
 	debugln("Starting the loop");
+	last_signal = millis();
 	while(1)
 	{
  		Read_Uart1(); // should be in an interrupt but cant seem to get that working
@@ -2475,6 +2508,38 @@ static void __attribute__((unused)) calc_fh_channels(uint8_t num_ch)
 
 
 /************PATS FUNCTIONS***************/
+void wait_until_usb_connected() {
+	uint32_t reset_wait = millis();
+	uint32_t blink_wait = millis();
+	LED_off;
+	while (!Serial && !rc_serial_override) {
+		
+		if (millis() - blink_wait >1000  ) {
+			LED2_toggle;
+			blink_wait = millis();
+		}
+
+		if (millis() - reset_wait >60000  ) // do a periodic soft reset. May fix some enumeration problems and other weird lock ups
+			SCB->AIRCR = 0x05fa0004; // soft reset MCU
+	}
+}
+
+void wait_until_usb_bytes_available_connected() {
+	uint32_t reset_wait = millis();
+	uint32_t blink_wait = millis();
+	LED_off;
+	while (!Serial.available() && !rc_serial_override) {
+		
+		if (millis() - blink_wait >1000  ) {
+			LED2_toggle;
+			blink_wait = millis();
+		}
+
+		if (millis() - reset_wait >60000  ) // do a periodic soft reset. May fix some enumeration problems and other weird lock ups
+			SCB->AIRCR = 0x05fa0004; // soft reset MCU
+	}
+}
+
 void check_pats_watchdog() {
   if (millis() - last_signal > 100) { // assume something went wrong and put throttle to 0
     if (mode3d)
@@ -2492,14 +2557,15 @@ void check_pats_watchdog() {
       LED_off;
       LED2_on;
       delayMilliseconds(100);
-      if (millis() - last_signal > 3000) { // after 10s completely reset the arduino. Then it will then re-ask for init settings.
+      if (millis() - last_signal > 2000) { // after 10s completely reset the arduino. Then it will then re-ask for init settings.
+          debugln("Pats USB comm time out, resetting.");
           LED2_off;
-          LED_off;
+          LED_off;         
           receive_protocol_info();
           protocol_init();
       }
     }
-    last_signal = millis();;
+    last_signal = millis();
   }
 }
 
@@ -2511,23 +2577,23 @@ void receive_protocol_info() {
 		debugln("Specify bind ID...");
 		uint8_t h0 = 0;
 		while(h0!=66){
-		while (!Serial.available());
+			wait_until_usb_bytes_available_connected();
 			h0= Serial.read(); // header 66 
 			if (h0 != 66)
 				debugln("Uh oh: I want 66 but I got this byte: %d",h0);
 		}
-		while (!Serial.available());
+		wait_until_usb_bytes_available_connected();
 		uint8_t h1 = Serial.read(); // header 67
-		while (!Serial.available());
+		wait_until_usb_bytes_available_connected();
 		mode3d = Serial.read(); // used to be id3, but changed to mode3d for backwards compatibility
 		uint8_t id3 = 0;
-		while (!Serial.available());
+		wait_until_usb_bytes_available_connected();
 		uint8_t id2 = Serial.read();
-		while (!Serial.available());
+		wait_until_usb_bytes_available_connected();
 		uint8_t id1 = Serial.read();
-		while (!Serial.available());
+		wait_until_usb_bytes_available_connected();
 		uint8_t id0 = Serial.read();    
-		while (!Serial.available());
+		wait_until_usb_bytes_available_connected();
 		uint8_t h2 = Serial.read(); // footer 68
 
 		MProtocol_id_master = id0 + (id1<<8) + (id2 << 16) + (id3 << 24);
@@ -2542,6 +2608,7 @@ void receive_protocol_info() {
 	debugln("Multiprotocol version: %d.%d.%d.%d", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION, VERSION_PATCH_LEVEL);  
 	receiving_protocol_info = 0;
 	debugln("receiving_protocol_info: %d", receiving_protocol_info);
+	last_signal=millis();
   #else
   	MProtocol_id_master = 4;
   #endif
@@ -2551,18 +2618,23 @@ void receive_protocol_info() {
 void Multimodule_to_Pats(uint8_t *pkg) {
 	//There seem to be two packages, one starting with 0x1B and one with 0x98. The second one is just the rc status or something, added by the MM itself and not important.
 	// https://docs.google.com/spreadsheets/d/1pvq1-7MYiWkGndKt3JTSKTLNV0jfciD-ZCOBWDJtDXc/edit?usp=sharing
-	if(pkg[0] == 0x1B) { 
-		uint16_t * id = (uint16_t *) &(pkg[2]);
-    	if(*id == 0x0750 || *id == 0x0760) {
-			/* special treatment, data contains two int16's */
-			int16_t * d1 = (int16_t *) &(pkg[6]);
-			int16_t * d2 = (int16_t *) &(pkg[4]);
-			debugln("sensor:%d;%d;%d;",*id,*d1,*d2);
-		} else {
-			int32_t  * d = (int32_t *)&(pkg[4]);
-			debugln("sensor:%d;%d%;",*id,*d);
+#ifdef PATS_SERIAL
+
+	if (Serial && !receiving_protocol_info && !rc_serial_override && millis() - last_signal < 100) {
+		if(pkg[0] == 0x1B) { 
+			uint16_t * id = (uint16_t *) &(pkg[2]);
+			if(*id == 0x0750 || *id == 0x0760) {
+		 		/* special treatment, data contains two int16's */
+		 		int16_t * d1 = (int16_t *) &(pkg[6]);
+		 		int16_t * d2 = (int16_t *) &(pkg[4]);
+		 		debugln("sensor:%d;%d;%d;",*id,*d1,*d2);
+		 	} else {
+		 		int32_t  * d = (int32_t *)&(pkg[4]);
+		 		debugln("sensor:%d;%d%;",*id,*d);
+		 	}
 		}
 	}
+#endif
 }
 
 void Read_Uart1() {

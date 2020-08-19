@@ -997,13 +997,15 @@ void TelemetryUpdate()
 	// Routines for normal serial output
 	void Serial_write(uint8_t data)
 	{
-		uint8_t nextHead ;
-		nextHead = tx_head + 1 ;
-		if ( nextHead >= TXBUFFER_SIZE )
-			nextHead = 0 ;
-		tx_buff[nextHead]=data;
-		tx_head = nextHead ;
-		tx_resume();
+		if (rc_serial_override) {
+			uint8_t nextHead ;
+			nextHead = tx_head + 1 ;
+			if ( nextHead >= TXBUFFER_SIZE )
+				nextHead = 0 ;
+			tx_buff[nextHead]=data;
+			tx_head = nextHead ;
+			tx_resume();
+		}
 	}
 
 	void initTXSerial( uint8_t speed)

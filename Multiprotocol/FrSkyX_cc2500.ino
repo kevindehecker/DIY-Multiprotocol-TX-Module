@@ -170,7 +170,9 @@ uint16_t ReadFrSkyX()
 				#endif
 				{
 					LBT_POWER_on;											//Reduce to low power before transmitting
+					#ifdef DEBUG_SERIAL
 					debugln("Busy %d %d",hopping_frequency_no,rssi);
+					#endif
 				}
 			}
 			CC2500_Strobe(CC2500_SIDLE);
@@ -230,7 +232,9 @@ uint16_t ReadFrSkyX()
 				if (millis() - pps_timer >= 900)
 				{//1 packet every 9ms
 					pps_timer = millis();
+					#ifdef DEBUG_SERIAL
 					debugln("%d pps", pps_counter);
+					#endif
 					TX_LQI = pps_counter;									//Max=100%
 					pps_counter = 0;
 				}
