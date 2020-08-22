@@ -300,7 +300,7 @@ typedef uint16_t (*void_function_t) (void);//pointer to a function with no param
 void_function_t remote_callback = 0;
 
 //Pats functions:
-void wait_until_usb_bytes_available_connected();
+void wait_until_usb_bytes_available();
 void wait_until_usb_connected();
 void receive_protocol_info();
 void check_pats_watchdog();
@@ -2525,7 +2525,7 @@ void wait_until_usb_connected() {
 	}
 }
 
-void wait_until_usb_bytes_available_connected() {
+void wait_until_usb_bytes_available() {
 	uint32_t reset_wait = millis();
 	uint32_t blink_wait = millis();
 	LED_off;
@@ -2542,59 +2542,67 @@ void wait_until_usb_bytes_available_connected() {
 }
 
 void check_pats_watchdog() {
-  if (millis() - last_signal > 100) { // assume something went wrong and put throttle to 0
-    if (mode3d)
-      Channel_data[THROTTLE] = (CHANNEL_MAX_100 - CHANNEL_MIN_100)/2 + CHANNEL_MIN_100;
-    else
-      Channel_data[THROTTLE] = CHANNEL_MIN_100;
-  }
+	static bool send_reset_once  = false;
+	if (millis() - last_signal > 100) { // assume something went wrong and put throttle to 0
+		if (mode3d)
+			Channel_data[THROTTLE] = (CHANNEL_MAX_100 - CHANNEL_MIN_100)/2 + CHANNEL_MIN_100;
+		else
+			Channel_data[THROTTLE] = CHANNEL_MIN_100;
+		Channel_data[AILERON]=1024;
+		Channel_data[ELEVATOR]=1024;
+		Channel_data[RUDDER]=1024;
 
-  if (millis() - last_signal > 1000) { // stop sending after a one second period of not receiving any updates from the basestation
-    debugln("Not receiving data from usb!")
-    while (!Serial.available()) {
-      LED_on;
-      LED2_off;
-      delayMilliseconds(100);
-      LED_off;
-      LED2_on;
-      delayMilliseconds(100);
-      if (millis() - last_signal > 2000) { // after 10s completely reset the arduino. Then it will then re-ask for init settings.
-          debugln("Pats USB comm time out, resetting.");
-          LED2_off;
-          LED_off;         
-          receive_protocol_info();
-          protocol_init();
-      }
-    }
-    last_signal = millis();
-  }
+		for(uint8_t i=4;i<NUM_CHN;i++)
+			Channel_data[i]=CHANNEL_MIN_100;
+	}
+	
+
+	if (millis() - last_signal > 1000) { // stop sending after a one second period of not receiving any updates from the basestation
+		debugln("Not receiving data from usb!")
+		while (!Serial.available()) {
+			LED_on;
+			LED2_off;
+			delayMilliseconds(100);
+			LED_off;
+			LED2_on;
+			delayMilliseconds(100);
+			if (millis() - last_signal > 2000) { // after 10s completely reset the arduino. Then it will then re-ask for init settings.
+				debugln("Pats USB comm time out, resetting.");
+				LED2_off;
+				LED_off;         
+				receive_protocol_info();
+				protocol_init();
+			}
+		}
+	last_signal = millis();
+	}
 }
 
 void receive_protocol_info() {
-  #ifdef PATS_SERIAL
+	#ifdef PATS_SERIAL
 	receiving_protocol_info = 1;
 	//receive bind id from base station
 	while(1){
 		debugln("Specify bind ID...");
 		uint8_t h0 = 0;
 		while(h0!=66){
-			wait_until_usb_bytes_available_connected();
+			wait_until_usb_bytes_available();
 			h0= Serial.read(); // header 66 
 			if (h0 != 66)
 				debugln("Uh oh: I want 66 but I got this byte: %d",h0);
 		}
-		wait_until_usb_bytes_available_connected();
+		wait_until_usb_bytes_available();
 		uint8_t h1 = Serial.read(); // header 67
-		wait_until_usb_bytes_available_connected();
+		wait_until_usb_bytes_available();
 		mode3d = Serial.read(); // used to be id3, but changed to mode3d for backwards compatibility
 		uint8_t id3 = 0;
-		wait_until_usb_bytes_available_connected();
+		wait_until_usb_bytes_available();
 		uint8_t id2 = Serial.read();
-		wait_until_usb_bytes_available_connected();
+		wait_until_usb_bytes_available();
 		uint8_t id1 = Serial.read();
-		wait_until_usb_bytes_available_connected();
+		wait_until_usb_bytes_available();
 		uint8_t id0 = Serial.read();    
-		wait_until_usb_bytes_available_connected();
+		wait_until_usb_bytes_available();
 		uint8_t h2 = Serial.read(); // footer 68
 
 		MProtocol_id_master = id0 + (id1<<8) + (id2 << 16) + (id3 << 24);
@@ -2610,9 +2618,9 @@ void receive_protocol_info() {
 	receiving_protocol_info = 0;
 	debugln("receiving_protocol_info: %d", receiving_protocol_info);
 	last_signal=millis();
-  #else
-  	MProtocol_id_master = 4;
-  #endif
+	#else
+		MProtocol_id_master = 4;
+	#endif
 }
 
 
