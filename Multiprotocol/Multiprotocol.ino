@@ -304,6 +304,7 @@ void wait_until_usb_bytes_available_connected();
 void wait_until_usb_connected();
 void receive_protocol_info();
 void check_pats_watchdog();
+#define PATS_RESET_TIMEOUT 360000
 
 // Init
 void setup()
@@ -2519,7 +2520,7 @@ void wait_until_usb_connected() {
 			blink_wait = millis();
 		}
 
-		if (millis() - reset_wait >60000  ) // do a periodic soft reset. May fix some enumeration problems and other weird lock ups
+		if (millis() - reset_wait >PATS_RESET_TIMEOUT) // do a periodic soft reset. May fix some enumeration problems and other weird lock ups
 			SCB->AIRCR = 0x05fa0004; // soft reset MCU
 	}
 }
@@ -2535,7 +2536,7 @@ void wait_until_usb_bytes_available_connected() {
 			blink_wait = millis();
 		}
 
-		if (millis() - reset_wait >60000  ) // do a periodic soft reset. May fix some enumeration problems and other weird lock ups
+		if (millis() - reset_wait >PATS_RESET_TIMEOUT) // do a periodic soft reset. May fix some enumeration problems and other weird lock ups
 			SCB->AIRCR = 0x05fa0004; // soft reset MCU
 	}
 }
