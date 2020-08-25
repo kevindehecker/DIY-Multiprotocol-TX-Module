@@ -2583,6 +2583,7 @@ void receive_protocol_info() {
 	receiving_protocol_info = 1;
 	//receive bind id from base station
 	while(1){
+		debugln("Multiprotocol version: %d.%d.%d.%d", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION, VERSION_PATCH_LEVEL);
 		debugln("Specify bind ID...");
 		uint8_t h0 = 0;
 		while(h0!=66){
@@ -2607,14 +2608,13 @@ void receive_protocol_info() {
 
 		MProtocol_id_master = id0 + (id1<<8) + (id2 << 16) + (id3 << 24);
 		if (h0 == 66 && h1 == 67 && h2 == 68){
-		debugln("ID received: %d , %d , %d , %d  -> %lx, mode3d: %d",id3,id2,id1,id0, MProtocol_id_master,mode3d);
+			debugln("ID received: %d , %d , %d , %d  -> %lx, mode3d: %d",id3,id2,id1,id0, MProtocol_id_master,mode3d);
 		break;
 		} else {
-		debugln("ERROR: received: %d, %d, %d, %d , %d , %d , %d  -> %lx",h0,h1,h2,id3,id2,id1,id0, MProtocol_id_master);
-		debugln("Bind id package not recognized.... retry");
+			debugln("ERROR: received: %d, %d, %d, %d , %d , %d , %d  -> %lx",h0,h1,h2,id3,id2,id1,id0, MProtocol_id_master);
+			debugln("Bind id package not recognized.... retry");
 		}
 	}
-	debugln("Multiprotocol version: %d.%d.%d.%d", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION, VERSION_PATCH_LEVEL);  
 	receiving_protocol_info = 0;
 	debugln("receiving_protocol_info: %d", receiving_protocol_info);
 	last_signal=millis();
