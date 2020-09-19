@@ -2615,6 +2615,7 @@ void receive_protocol_info() {
 			debugln("Bind id package not recognized.... retry");
 		}
 	}
+	debugln("Multiprotocol version: %d.%d.%d.%d", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION, VERSION_PATCH_LEVEL);
 	receiving_protocol_info = 0;
 	debugln("receiving_protocol_info: %d", receiving_protocol_info);
 	last_signal=millis();
