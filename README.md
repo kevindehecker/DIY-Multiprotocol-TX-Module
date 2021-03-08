@@ -141,7 +141,7 @@ Your help would be greatly appreciated.  If protocol reverse-engineering and dev
 
 If you like this project and want to support further development please consider making a [donation](docs/Donations.md).
 
-## Related repo's
+## Related repo's (PATS)
 [Pats](https://github.com/pats-drones/pats/tree/rt_delay_optimization)
 
 [Betaflight](https://github.com/pats-drones/betaflight/tree/pats_rt-delay-optimization)
