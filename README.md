@@ -140,3 +140,10 @@ A very big thanks to all the people who have shared their time so graciously to 
 Your help would be greatly appreciated.  If protocol reverse-engineering and dev is not your thing then any help with testing and contributing to the documentation would be amazing.  Given the number of different Tx/module hardware/RF module/protocol/model combinations the process of testing and documenting is a major bottleneck for the developers.  Anything you can do to help will free them up to do even greater things. 
 
 If you like this project and want to support further development please consider making a [donation](docs/Donations.md).
+
+## Related repo's
+[Pats](https://github.com/pats-drones/pats/tree/rt_delay_optimization)
+
+[Betaflight](https://github.com/pats-drones/betaflight/tree/pats_rt-delay-optimization)
+
+[DIY-Multiprotocol-TX-Module](https://github.com/pats-drones/DIY-Multiprotocol-TX-Module/tree/pats-rt-delay-optimization)
