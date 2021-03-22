@@ -93,6 +93,10 @@ typedef struct
 		HardwareTimer HWTimer3(3);
 		void ISR_COMPB();
 	#endif
+	#ifdef ENABLE_TEST
+		HardwareTimer HWTimer4(4);
+		void handler_test_timer();
+	#endif
 
 	void PPM_decode();
 	extern "C"
@@ -2171,6 +2175,10 @@ void modules_reset()
 			TIMER3_BASE->DIER &= ~TIMER_DIER_CC2IE;				// Disable Timer3/Comp2 interrupt
 			HWTimer3.refresh();									// Refresh the timer's count, prescale, and overflow
 			HWTimer3.resume();
+		#endif
+		#ifdef
+			HWTimer4.pause();
+			TIMER4_BASE
 		#endif
 	}
 #endif
