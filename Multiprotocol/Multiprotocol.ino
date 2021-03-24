@@ -68,6 +68,8 @@ typedef struct
 
 #include "Multiprotocol.h"
 
+#include "benchmark.h"
+
 //Multiprotocol module configuration file
 #include "_Config.h"
 
@@ -92,10 +94,6 @@ typedef struct
 	#ifdef ENABLE_SERIAL
 		HardwareTimer HWTimer3(3);
 		void ISR_COMPB();
-	#endif
-	#ifdef ENABLE_TEST
-		HardwareTimer HWTimer4(4);
-		void handler_test_timer();
 	#endif
 
 	void PPM_decode();
@@ -221,6 +219,7 @@ bool rc_serial_override = false;
 #define RXBUFFER_SIZE 36	// 26+1+9
 volatile uint8_t rx_buff[RXBUFFER_SIZE];
 volatile uint8_t rx_ok_buff[RXBUFFER_SIZE];
+char benchmark_str[BENCHMAKR_MAX_STRING_LENGTH + 16] = {'\0'};
 volatile bool discard_frame = false;
 volatile uint8_t rx_idx=0, rx_len=0;
 
@@ -313,6 +312,8 @@ void check_pats_watchdog();
 // Init
 void setup()
 {
+	benchmark_t benchmark_setup;
+	benchmark_start(&benchmark_setup, "setup()");
 	// Setup diagnostic uart before anything else
 
 
@@ -636,11 +637,17 @@ void setup()
 		#endif //ENABLE_SERIAL
 	}
 
+
 	#ifdef PATS_SERIAL
 		Serial.begin(115200,SERIAL_8N1);
 		wait_until_usb_connected();
 		delay(50);  // Brief delay for FTDI debugging
 		debugln("Multi module initializing!" );	 // This message does not always never arrive, e.g. in screen
+
+		benchmark_stop(&benchmark_setup);
+		benchmark_tostr(&benchmark_setup, benchmark_str);
+		delay(50);
+		debug(benchmark_str);
 	#endif
 
 	if (!rc_serial_override)
@@ -650,6 +657,7 @@ void setup()
 
 	debugln("Init complete and ready to PATS");
 	LED2_on;
+
 }
 
 // Main
@@ -662,6 +670,7 @@ void loop()
 	last_signal = millis();
 	while(1)
 	{
+		
  		Read_Uart1(); // should be in an interrupt but cant seem to get that working
 		bool first_time = true;
 		while(remote_callback==0 || IS_WAIT_BIND_on || IS_INPUT_SIGNAL_off) {
@@ -676,11 +685,12 @@ void loop()
 			first_time = false;
 
 			#ifdef PATS_SERIAL
-				if (!rc_serial_override)
+				if (!rc_serial_override) {
 					check_pats_watchdog();
+				}
 			#endif
 		}
-
+		
 		TX_MAIN_PAUSE_on;
 		tx_pause();
 		next_callback=remote_callback()<<1;
@@ -2175,10 +2185,6 @@ void modules_reset()
 			TIMER3_BASE->DIER &= ~TIMER_DIER_CC2IE;				// Disable Timer3/Comp2 interrupt
 			HWTimer3.refresh();									// Refresh the timer's count, prescale, and overflow
 			HWTimer3.resume();
-		#endif
-		#ifdef
-			HWTimer4.pause();
-			TIMER4_BASE
 		#endif
 	}
 #endif
