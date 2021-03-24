@@ -22,7 +22,7 @@ void benchmark_tostr(benchmark_t* b, char* str)
     strcpy(str, "benchmark: ");
     strcat(str, b->name);
     strcat(str, " ");
-    sprintf(tmp, "%u", b->stop - b->start);
+    sprintf(tmp, "%d", b->stop - b->start);
     //itoa(b->stop - b->start, tmp, 10);
     strcat(str, tmp);
     strcat(str, " ms\r\n");
