@@ -7,13 +7,21 @@ extern "C" {
 
 #include <stdint.h>
 
-#define BENCHMAKR_MAX_STRING_LENGTH 32
+#define BENCHMARK_MAX_STRING_LENGTH 32
+
+enum EBenchmarkState 
+{
+    E_BENCHMARK_STATE_NONE,
+    E_BENCHMARK_STATE_RUNNING,
+    E_BENCHMARK_STATE_STOPPED,
+    E_BENCHMARK_STATE_COMPLETED
+};
 
 typedef struct 
 {
     uint32_t start;
     uint32_t stop;
-    char name[BENCHMAKR_MAX_STRING_LENGTH];
+    char name[BENCHMARK_MAX_STRING_LENGTH];
 } benchmark_t;
 
 void benchmark_start(benchmark_t* b, const char* name);

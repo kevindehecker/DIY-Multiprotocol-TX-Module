@@ -219,10 +219,14 @@ bool rc_serial_override = false;
 #define RXBUFFER_SIZE 36	// 26+1+9
 volatile uint8_t rx_buff[RXBUFFER_SIZE];
 volatile uint8_t rx_ok_buff[RXBUFFER_SIZE];
-char benchmark_str[BENCHMAKR_MAX_STRING_LENGTH + 16] = {'\0'};
 volatile bool discard_frame = false;
 volatile uint8_t rx_idx=0, rx_len=0;
 
+// Benchmark
+uint16_t value = 0;
+char benchmark_str[BENCHMARK_MAX_STRING_LENGTH + 16] = {'\0'};
+extern benchmark_t benchmark;
+extern EBenchmarkState benchmarkState;
 
 // Telemetry
 #define TELEMETRY_BUFFER_SIZE 32
@@ -307,13 +311,12 @@ void wait_until_usb_bytes_available();
 void wait_until_usb_connected();
 void receive_protocol_info();
 void check_pats_watchdog();
+//void Write_Benchmark_Uart(uint8_t *buffer, uint32_t len);
 #define PATS_RESET_TIMEOUT 360000
 
 // Init
 void setup()
 {
-	benchmark_t benchmark_setup;
-	benchmark_start(&benchmark_setup, "setup()");
 	// Setup diagnostic uart before anything else
 
 
@@ -643,11 +646,7 @@ void setup()
 		wait_until_usb_connected();
 		delay(50);  // Brief delay for FTDI debugging
 		debugln("Multi module initializing!" );	 // This message does not always never arrive, e.g. in screen
-
-		benchmark_stop(&benchmark_setup);
-		benchmark_tostr(&benchmark_setup, benchmark_str);
 		delay(50);
-		debug(benchmark_str);
 	#endif
 
 	if (!rc_serial_override)
@@ -657,7 +656,7 @@ void setup()
 
 	debugln("Init complete and ready to PATS");
 	LED2_on;
-
+	benchmarkState = E_BENCHMARK_STATE_NONE;
 }
 
 // Main
@@ -670,7 +669,12 @@ void loop()
 	last_signal = millis();
 	while(1)
 	{
-		
+		if (benchmarkState == E_BENCHMARK_STATE_COMPLETED)
+		{
+			benchmark_tostr(&benchmark, benchmark_str);
+			debug(benchmark_str);
+			benchmarkState = E_BENCHMARK_STATE_NONE;
+		}
  		Read_Uart1(); // should be in an interrupt but cant seem to get that working
 		bool first_time = true;
 		while(remote_callback==0 || IS_WAIT_BIND_on || IS_INPUT_SIGNAL_off) {
@@ -2685,6 +2689,20 @@ void Read_Uart1() {
         	if(!IS_RX_DONOTUPDATE_on) { //Good frame received and main is not working on the buffer
 				rx_len=idx;
 				memcpy((void*)rx_ok_buff,(const void*)rx_buff,idx);// Duplicate the buffer
+				// Check if channel data has changed
+				// If it did start benchmarking
+				value = rx_ok_buff[13] << 8 | rx_ok_buff[14];
+				// debugln("%d", value); //off = 816, on = 996
+				if (value == 996 && benchmarkState == E_BENCHMARK_STATE_NONE)
+				{
+					benchmarkState = E_BENCHMARK_STATE_RUNNING;
+					benchmark_start(&benchmark, "MultiModule");
+				}
+				else if(value == 816 && benchmarkState == E_BENCHMARK_STATE_STOPPED)
+				{
+					benchmarkState = E_BENCHMARK_STATE_COMPLETED;
+				}
+
 				LED_toggle; // red
 				RX_FLAG_on;     // flag for main to process servo data
         	} else

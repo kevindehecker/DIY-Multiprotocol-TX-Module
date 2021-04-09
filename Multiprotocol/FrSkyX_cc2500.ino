@@ -16,6 +16,10 @@
 // #if defined(FRSKYX_CC2500_INO)
 
 #include "iface_cc2500.h"
+#include "benchmark.h"
+
+benchmark_t benchmark;
+EBenchmarkState benchmarkState;
 
 static void __attribute__((unused)) FrSkyX_build_bind_packet()
 {
@@ -180,7 +184,13 @@ uint16_t ReadFrSkyX()
 			CC2500_SetTxRxMode(TX_EN);
 			CC2500_SetPower();
 			hopping_frequency_no = (hopping_frequency_no+FrSkyX_chanskip)%47;
+
 			CC2500_WriteData(packet, packet[0]+1);
+			if(benchmarkState == E_BENCHMARK_STATE_RUNNING)
+			{
+				benchmark_stop(&benchmark);
+				benchmarkState = E_BENCHMARK_STATE_STOPPED;
+			}
 			state=FRSKY_DATA3;
 			if(FrSkyFormat & 2)
 				return 4000;	// LBT
